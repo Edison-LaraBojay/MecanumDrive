@@ -1,8 +1,9 @@
 #include <main.h>
 
 class Encoder {
-    double FORWARD = 1;
-    double REVERSE = -1;
+    public:
+    static double FORWARD = 1;
+    static double REVERSE = -1;
 
     Encoder(int port);
 
