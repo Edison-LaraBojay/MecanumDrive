@@ -75,7 +75,7 @@ std::array<double, 4> Mecanum::calculateDrive(
 
     std::array<double, 4> powers{};
 
-    // Standard mecanum mapping
+    // Mecanum mapping
     powers[0] = left.y + left.x;   // front left
     powers[1] = left.y - left.x;   // front right
     powers[2] = right.y - right.x; // back left
