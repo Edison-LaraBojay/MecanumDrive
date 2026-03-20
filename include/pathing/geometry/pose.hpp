@@ -19,6 +19,18 @@ namespace pathing::geometry {
 
         double distanceTo(const Pose& other) const;
 
+        double getHeading() const {
+            return heading;
+        }
+
+        double getX() const {
+            return x;
+        }
+
+        double getY() const {
+            return y;
+        }
+
         Vector2 fieldToRobot(const Vector2& v) const;
         Vector2 robotToField(const Vector2& v) const;
 
