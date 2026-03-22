@@ -1,5 +1,5 @@
 #include "pathing/localization/two_wheel_localizer.hpp"
-
+#include "pathing/geometry/vector2.hpp"
 #include "pathing/math/math_functions.hpp"
 
 #include <cmath>

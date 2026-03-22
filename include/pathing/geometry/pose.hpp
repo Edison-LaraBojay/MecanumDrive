@@ -36,6 +36,14 @@ namespace pathing::geometry {
 
         Vector2 errorTo(const Pose& target) const;
 
+        Pose operator+(const Pose& other) const {
+    return Pose(
+        x + other.x,
+        y + other.y,
+        heading + other.heading
+    );
+}
+
         void normalizeHeading();
     };
 }
