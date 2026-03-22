@@ -21,6 +21,10 @@ private:
 
 public:
     PathFollower();
+    
+    double getOmega(const Pose& robotPose);
+
+    Pose getTargetPose(const Pose& robotPose);
 
     void setPath(const pathing::path::Path& path);
 

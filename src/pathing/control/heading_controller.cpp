@@ -45,7 +45,7 @@ double HeadingController::update(
         );
 
 
-    double omega =
+    double omega =  
         headingPID.update(
             error,
             0.0,

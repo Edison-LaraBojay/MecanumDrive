@@ -1,5 +1,5 @@
 #include <main.h>
-
+//it is yelling at us here saying a member with an in-class initializer must be const
 class Encoder {
     public:
     static double FORWARD = 1;

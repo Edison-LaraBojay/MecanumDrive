@@ -58,9 +58,7 @@ Vector2 PathFollower::update(const Pose& robotPose)
     );
 
 
-    /*
-     * project robot onto curve
-     */
+    // project robot onto curve
     double t = PointProjection::project(
         *segment.getCurve(),
         robotPos,
@@ -69,10 +67,7 @@ Vector2 PathFollower::update(const Pose& robotPose)
     );
 
 
-    /*
-     * simple lookahead in parameter space
-     * (can improve later with arc length)
-     */
+    // lookahead
     double lookaheadT =
         t + 0.1;
 
@@ -91,9 +86,7 @@ Vector2 PathFollower::update(const Pose& robotPose)
     }
 
 
-    /*
-     * path geometry at lookahead
-     */
+    // path geom from lookahead
     Vector2 targetPos =
         segment.getPoint(lookaheadT);
 
@@ -101,9 +94,7 @@ Vector2 PathFollower::update(const Pose& robotPose)
         segment.getDerivative(lookaheadT);
 
 
-    /*
-     * compute path heading from tangent
-     */
+    // path heading from tangent
     double heading =
         std::atan2(
             tangent.y,
@@ -118,9 +109,7 @@ Vector2 PathFollower::update(const Pose& robotPose)
     );
 
 
-    /*
-     * compute path-relative errors
-     */
+    // path-relative errors
     double forwardError =
         ErrorCalculator::xError(
             targetPose,
@@ -134,30 +123,25 @@ Vector2 PathFollower::update(const Pose& robotPose)
         );
 
 
-    /*
-     * PID corrections
-     */
+    // PID corrections
     double dt = 0.01;
 
     double forwardCmd =
         xPID.update(
             forwardError,
-            0,//actual is target, current, dt so set current to 0 and target becomes error
+            0,
             dt
         );
 
     double lateralCmd =
         yPID.update(
             lateralError,
-            0,//actual is target, current, dt so set current to 0 and target becomes error
+            0,
             dt
         );
 
 
-    /*
-     * convert path-relative command
-     * to global velocity vector
-     */
+    // path relative command to global velocity
     double cosH =
         std::cos(heading);
 
@@ -174,9 +158,7 @@ Vector2 PathFollower::update(const Pose& robotPose)
         lateralCmd * cosH;
 
 
-    /*
-     * clamp velocity magnitude
-     */
+    // vel magnitude clamping
     double maxVel =
         FollowerConstants::MAX_VELOCITY;
 
@@ -191,6 +173,107 @@ Vector2 PathFollower::update(const Pose& robotPose)
 
 
     return Vector2(vx, vy);
+}
+
+
+// heading contorl
+double PathFollower::getOmega(const Pose& robotPose)
+{
+    if(path == nullptr || path->size() == 0)
+        return 0.0;
+
+    const PathSegment& segment =
+        path->getSegment(currentSegment);
+
+    Vector2 robotPos(
+        robotPose.x,
+        robotPose.y
+    );
+
+    double t = PointProjection::project(
+        *segment.getCurve(),
+        robotPos,
+        0.5,
+        8
+    );
+
+    double lookaheadT = t + 0.1;
+
+    if(lookaheadT > 1.0)
+        lookaheadT = 1.0;
+
+    Vector2 tangent =
+        segment.getDerivative(lookaheadT);
+
+    double targetHeading =
+        std::atan2(
+            tangent.y,
+            tangent.x
+        );
+
+    double headingError =
+        targetHeading - robotPose.heading;
+
+    // wrap to [-pi, pi]
+    while(headingError > M_PI) headingError -= 2*M_PI;
+    while(headingError < -M_PI) headingError += 2*M_PI;
+
+    return FollowerConstants::HEADING_kP * headingError;
+}
+
+
+Pose PathFollower::getTargetPose(const Pose& robotPose)
+{
+    if(path == nullptr || path->size() == 0)
+        return robotPose;
+
+    const PathSegment& segment =
+        path->getSegment(currentSegment);
+
+    Vector2 robotPos(
+        robotPose.x,
+        robotPose.y
+    );
+
+    double t = PointProjection::project(
+        *segment.getCurve(),
+        robotPos,
+        0.5,
+        8
+    );
+
+    double lookaheadT = t + 0.1;
+
+    if(lookaheadT > 1.0)
+    {
+        if(currentSegment < path->size() - 1)
+        {
+            currentSegment++;
+            lookaheadT = 0.0;
+        }
+        else
+        {
+            lookaheadT = 1.0;
+        }
+    }
+
+    Vector2 targetPos =
+        segment.getPoint(lookaheadT);
+
+    Vector2 tangent =
+        segment.getDerivative(lookaheadT);
+
+    double heading =
+        std::atan2(
+            tangent.y,
+            tangent.x
+        );
+
+    return Pose(
+        targetPos.x,
+        targetPos.y,
+        heading
+    );
 }
 
 }

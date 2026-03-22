@@ -64,7 +64,7 @@ const Pose& TwoWheelLocalizer::getPose() const
     static Pose pose;
 
     pose =
-        startPose + //fix this teehee
+        startPose +
         displacementPose;
 
     return pose;
