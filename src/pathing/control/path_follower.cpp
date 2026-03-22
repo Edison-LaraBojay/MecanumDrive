@@ -1,4 +1,8 @@
-#include "pathing/control/path_follower.hpp" //fix this because lowkey annoying
+#include "pathing/control/path_follower.hpp"
+
+#include "pathing/control/error_calculator.hpp"
+#include "pathing/control/follower_constants.hpp"
+
 #include "pathing/geometry/point_projection.hpp"
 
 #include <cmath>
@@ -8,14 +12,25 @@ namespace pathing::control {
 using namespace pathing::geometry;
 using namespace pathing::path;
 
+
 PathFollower::PathFollower()
-    : xPID(1.0, 0.0, 0.1),   // tune later
-      yPID(1.0, 0.0, 0.1)
+    : xPID(
+        FollowerConstants::FORWARD_kP,
+        FollowerConstants::FORWARD_kI,
+        FollowerConstants::FORWARD_kD
+      ),
+      yPID(
+        FollowerConstants::LATERAL_kP,
+        FollowerConstants::LATERAL_kI,
+        FollowerConstants::LATERAL_kD
+      )
 {
     path = nullptr;
     currentSegment = 0;
-    lookaheadDistance = 6.0;
+    lookaheadDistance =
+        FollowerConstants::LOOKAHEAD_DISTANCE;
 }
+
 
 void PathFollower::setPath(const Path& p)
 {
@@ -26,16 +41,26 @@ void PathFollower::setPath(const Path& p)
     yPID.reset();
 }
 
+
 Vector2 PathFollower::update(const Pose& robotPose)
 {
     if(path == nullptr || path->size() == 0)
         return Vector2(0, 0);
 
-    const PathSegment& segment = path->getSegment(currentSegment);
 
-    Vector2 robotPos(robotPose.x, robotPose.y);
+    const PathSegment& segment =
+        path->getSegment(currentSegment);
 
-    //Project robot onto curve
+
+    Vector2 robotPos(
+        robotPose.x,
+        robotPose.y
+    );
+
+
+    /*
+     * project robot onto curve
+     */
     double t = PointProjection::project(
         *segment.getCurve(),
         robotPos,
@@ -43,8 +68,14 @@ Vector2 PathFollower::update(const Pose& robotPose)
         8
     );
 
-    //Lookahead along curve
-    double lookaheadT = t + 0.1;
+
+    /*
+     * simple lookahead in parameter space
+     * (can improve later with arc length)
+     */
+    double lookaheadT =
+        t + 0.1;
+
 
     if(lookaheadT > 1.0)
     {
@@ -59,22 +90,105 @@ Vector2 PathFollower::update(const Pose& robotPose)
         }
     }
 
-    Vector2 target = segment.getPoint(lookaheadT);
 
-    //PID control
-    double dt = 0.01; // timestep
+    /*
+     * path geometry at lookahead
+     */
+    Vector2 targetPos =
+        segment.getPoint(lookaheadT);
 
-    double vx = xPID.update(target.x, robotPose.x, dt);
-    double vy = yPID.update(target.y, robotPose.y, dt);
+    Vector2 tangent =
+        segment.getDerivative(lookaheadT);
 
-    //Clamp max velocity
-    double maxVel = 10.0;
 
-    double mag = std::sqrt(vx * vx + vy * vy);
-    if (mag > maxVel && mag > 0.0) {
+    /*
+     * compute path heading from tangent
+     */
+    double heading =
+        std::atan2(
+            tangent.y,
+            tangent.x
+        );
+
+
+    Pose targetPose(
+        targetPos.x,
+        targetPos.y,
+        heading
+    );
+
+
+    /*
+     * compute path-relative errors
+     */
+    double forwardError =
+        ErrorCalculator::xError(
+            targetPose,
+            robotPose
+        );
+
+    double lateralError =
+        ErrorCalculator::yError(
+            targetPose,
+            robotPose
+        );
+
+
+    /*
+     * PID corrections
+     */
+    double dt = 0.01;
+
+    double forwardCmd =
+        xPID.update(
+            forwardError,
+            0,//actual is target, current, dt so set current to 0 and target becomes error
+            dt
+        );
+
+    double lateralCmd =
+        yPID.update(
+            lateralError,
+            0,//actual is target, current, dt so set current to 0 and target becomes error
+            dt
+        );
+
+
+    /*
+     * convert path-relative command
+     * to global velocity vector
+     */
+    double cosH =
+        std::cos(heading);
+
+    double sinH =
+        std::sin(heading);
+
+
+    double vx =
+        forwardCmd * cosH -
+        lateralCmd * sinH;
+
+    double vy =
+        forwardCmd * sinH +
+        lateralCmd * cosH;
+
+
+    /*
+     * clamp velocity magnitude
+     */
+    double maxVel =
+        FollowerConstants::MAX_VELOCITY;
+
+    double mag =
+        std::sqrt(vx*vx + vy*vy);
+
+    if(mag > maxVel && mag > 0.0)
+    {
         vx *= maxVel / mag;
         vy *= maxVel / mag;
     }
+
 
     return Vector2(vx, vy);
 }

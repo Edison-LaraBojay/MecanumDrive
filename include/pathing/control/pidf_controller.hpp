@@ -15,6 +15,8 @@ public:
 
     double update(double target, double current, double dt);
 
+    double getLastError() const;
+
     void reset();
 };
 

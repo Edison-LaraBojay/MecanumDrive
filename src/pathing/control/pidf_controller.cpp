@@ -22,6 +22,10 @@ double PIDFController::update(double target, double current, double dt) {
     return kP * error + kI * integral + kD * derivative + kF * target;
 }
 
+double PIDFController::getLastError() const {
+    return prevError;
+}
+
 void PIDFController::reset() {
     integral = 0.0;
     prevError = 0.0;
