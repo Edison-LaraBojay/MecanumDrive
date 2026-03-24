@@ -22,7 +22,8 @@ class ThreeWheelLocalizer {
     double getLateralMultiplier();
     double getTurningMultiplier();
     bool isNAN();
-
+    // Are we gonna need NAN cases? I would imagine if no value occurs and it's empty maybe?
+    //Chayipiti 
     double FORWARD_TICKS_TO_INCHES;
     double STRAFE_TICKS_TO_INCHES;
     double TURN_TICKS_TO_RADIANS;

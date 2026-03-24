@@ -31,9 +31,9 @@ ControlOutput Controller::update(
 
     // Translation magnitude
     double translationError = std::sqrt(errorX * errorX + errorY * errorY);
-
+    
     // dt (temporary fixed timestep)
-    double dt = 0.02; // 20ms loop (adjust later if needed)
+    double dt = 0.02; // 20ms loop (adjust later if we gotta)
 
     // PID outputs
     double translationOutput =
